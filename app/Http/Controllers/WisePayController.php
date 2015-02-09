@@ -9,7 +9,7 @@ use GuzzleHttp\Client;
 
 class WisePayController extends Controller {
 
-    public function checkWisePay(Request $request){
+    public function check(Request $request){
 
         //
 
