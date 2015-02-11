@@ -34,11 +34,9 @@ class WisePayController extends Controller
         // TODO: Return balances
     }
 
-    public function authenticateUser()
+    public function authenticateUser(Client $client, CookieJar $cookieJar)
     {
         // TODO: Authenticate user with WisePay website
-        $client = new Client();
-        $jar = new CookieJar();
         $response = $client->post('https://www.wisepay.co.uk/store/parent/process.asp', [
             'headers' => [
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 6.2; Win64; x64; rv:27.0) Gecko/20100101 Waterfox/27.0 Firefox/27.0.1',
