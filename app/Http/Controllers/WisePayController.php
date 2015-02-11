@@ -20,7 +20,7 @@ class WisePayController extends Controller {
 
     public function check(){
         // TODO: Return balances
-	}
+    }
 
     public function authenticateUser(){
         // TODO: Authenticate user with WisePay website
