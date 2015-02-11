@@ -10,8 +10,18 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJarInterface;
 use GuzzleHttp\Cookie\CookieJar;
 
+/**
+ * Class WisePayController
+ * @package App\Http\Controllers
+ */
 class WisePayController extends Controller {
 
+
+    /**
+     * The request sent by the user.
+     *
+     * @var Request
+     */
     private $request;
 
     public function __construct(Request $request){
