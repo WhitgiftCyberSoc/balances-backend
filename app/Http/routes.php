@@ -11,4 +11,7 @@
 |
 */
 
-Route::post('check', 'WisePayController@check');
+Route::post('check', [
+    'middleware' => 'auth',
+    'uses' => 'WisePayController@check'
+]);
