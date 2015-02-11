@@ -14,8 +14,8 @@ use GuzzleHttp\Cookie\CookieJar;
  * Class WisePayController
  * @package App\Http\Controllers
  */
-class WisePayController extends Controller {
-
+class WisePayController extends Controller
+{
 
     /**
      * The request sent by the user.
@@ -24,15 +24,18 @@ class WisePayController extends Controller {
      */
     private $request;
 
-    public function __construct(Request $request){
+    public function __construct(Request $request)
+    {
         $this->request = $request;
     }
 
-    public function check(){
+    public function check()
+    {
         // TODO: Return balances
     }
 
-    public function authenticateUser(){
+    public function authenticateUser()
+    {
         // TODO: Authenticate user with WisePay website
         $client = new Client();
         $jar = new CookieJar();
@@ -65,7 +68,8 @@ class WisePayController extends Controller {
         return $code;
     }
 
-    public function scrapeBalances(){
+    public function scrapeBalances()
+    {
         // TODO: Scrape balances and check for errors
         $code = $this->authenticateUser();
     }
