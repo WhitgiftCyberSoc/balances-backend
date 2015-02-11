@@ -11,4 +11,4 @@
 |
 */
 
-Route::post('/check', 'WisePayController@check');
+Route::post('check', 'WisePayController@check');
