@@ -12,7 +12,6 @@
 */
 
 Route::post('check', [
-    // 'middleware' => 'auth', // TODO: Enable middleware once finished
-     'uses' => 'WisePayController@check'
-//    'uses' => 'WisePayController@scrapeBalances'
+    'middleware' => 'auth',
+    'uses' => 'WisePayController@check'
 ]);
