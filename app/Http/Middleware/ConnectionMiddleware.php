@@ -13,7 +13,7 @@ class ConnectionMiddleware {
 	 */
 	public function handle($request, Closure $next)
 	{
-		// Validate HTTPS connection - Disabled
+		// Validate HTTPS connection
 /*		if (!($request->secure())) {
 			return response()->json(['error' => 'true', 'message' => 'The server has rejected an insecure connection.'], 400);
 		}*/
