@@ -24,6 +24,12 @@ class WisePayController extends Controller
      */
     private $request;
 
+
+    /**
+     * @var CookieJar
+     */
+    private $cookieJar;
+
     public function __construct(Request $request)
     {
         $this->request = $request;
@@ -34,8 +40,17 @@ class WisePayController extends Controller
         // TODO: Return balances
     }
 
-    public function authenticateUser(Client $client, CookieJar $cookieJar)
+    public function scrapeBalances()
     {
+        // TODO: Scrape balances and check for errors
+        $code = $this->authenticateUser();
+    }
+
+    public function authenticateUser()
+    {
+        $client = new Client();
+        $cookieJar = new CookieJar();
+
         // TODO: Authenticate user with WisePay website
         $response = $client->post('https://www.wisepay.co.uk/store/parent/process.asp', [
             'headers' => [
@@ -51,7 +66,7 @@ class WisePayController extends Controller
                 'x' => '0',
                 'y' => '0'
             ],
-            'cookies' => $jar
+            'cookies' => $cookieJar
         ]);
         $code = $response->getBody();
 
@@ -60,16 +75,15 @@ class WisePayController extends Controller
         //TODO: Check for non-200 status code
 
         //TODO: Check for authentication failure
-
+        if (strpos($code, 'Login Failure') !== false) {
+            return response()->json(['error' => 'true', 'message' => 'The username or password is incorrect. Please check your credentials and try again.'], 401);
+        } elseif (strpos($code, '/parent/process.asp?ACT=logout') !== false) {
+            $this->cookieJar = $cookieJar;
+        } else {
+        }
         //TODO: Check for authentication success or log and return an error
 
         return $code;
-    }
-
-    public function scrapeBalances()
-    {
-        // TODO: Scrape balances and check for errors
-        $code = $this->authenticateUser();
     }
 
 }
