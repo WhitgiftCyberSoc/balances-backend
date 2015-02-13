@@ -24,12 +24,6 @@ class WisePayController extends Controller
      */
     private $request;
 
-
-    /**
-     * @var CookieJar
-     */
-    private $cookieJar;
-
     public function __construct(Request $request)
     {
         $this->request = $request;
@@ -38,15 +32,26 @@ class WisePayController extends Controller
     public function check()
     {
         // TODO: Return balances
+        $balanceRequest = $this->scrapeBalances();
+
+        // Pass on previous errors
+        if ($balanceRequest['error'] == 'true') {
+            return $balanceRequest['response'];
+        }
     }
 
     public function scrapeBalances()
     {
         // TODO: Scrape balances and check for errors
-        $code = $this->authenticateUser();
+        $authRequest = $this->authUser();
+
+        // Pass on previous errors
+        if ($authRequest['error'] == 'true') {
+            return $authRequest;
+        }
     }
 
-    public function authenticateUser()
+    public function authUser()
     {
         $client = new Client();
         $cookieJar = new CookieJar();
@@ -64,26 +69,39 @@ class WisePayController extends Controller
                 'acc_user_email' => $this->request->input('username'),
                 'acc_password' => $this->request->input('password'),
                 'x' => '0',
-                'y' => '0'
+                'y' => '0',
+                'timeout' => '5'
             ],
             'cookies' => $cookieJar
         ]);
+
+        // Check for non-200 HTTP status code
+        if ($response->getStatusCode() != 200) {
+            return [
+                'error' => 'true',
+                'response' => response()->json(['error' => 'true', 'message' => 'The WisePay server returned a non-200 status code - ' . $response->getStatusCode()], 502)
+            ];
+        }
+
+        // Check for authentication failure
         $code = $response->getBody();
 
-        //TODO? Timeout exception
-
-        //TODO: Check for non-200 status code
-
-        //TODO: Check for authentication failure
         if (strpos($code, 'Login Failure') !== false) {
-            return response()->json(['error' => 'true', 'message' => 'The username or password is incorrect. Please check your credentials and try again.'], 401);
+            return [
+                'error' => 'true',
+                'response' => response()->json(['error' => 'true', 'message' => 'The username or password is incorrect. Please check your credentials and try again.'], 401)
+            ];
         } elseif (strpos($code, '/parent/process.asp?ACT=logout') !== false) {
-            $this->cookieJar = $cookieJar;
+            return [
+                'error' => 'false',
+                'cookie' => $cookieJar
+            ];
         } else {
+            return [
+                'error' => 'true',
+                'response' => response()->json(['error' => 'true', 'message' => 'The server experienced an unhandled exception.'], 500)
+            ];
         }
-        //TODO: Check for authentication success or log and return an error
-
-        return $code;
     }
 
 }
