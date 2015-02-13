@@ -78,8 +78,8 @@ class WisePayController extends Controller
 
         // Scrape balances from DOM
         try {
-            $balances['lunch'] = $xs->find('//*[@id="page_content"]/table[2]/tbody/tr[2]/td/table[3]/tbody/tr/td/b[1]');
-            $balances['tuck'] = $xs->find('//*[@id="page_content"]/table[2]/tbody/tr[2]/td/table[3]/tbody/tr/td/b[2]');
+            $balances['lunch'] = $xs->find('//*[@id="page_content"]/table[2]/tr[2]/td/table[3]/tr/td/b[1]')->innerHTML();
+            $balances['tuck'] = $xs->find('//*[@id="page_content"]/table[2]/tr[2]/td/table[3]/tr/td/b[2]')->innerHTML();
         } catch (NodeNotFoundException $e) {
             return [
                 'error' => 'true',
@@ -87,10 +87,10 @@ class WisePayController extends Controller
             ];
         }
 
-        // Extract double from balances
+        // Extract  balances as integers
         foreach ($balances as &$balance) {
-            if (preg_match('/((\d+)\.(\d+))/', $balance, $match)) {
-                $balance = floatval($match);
+            if (preg_match('/(\d+)\.(\d+)/', $balance, $match)) {
+                $balance = (int) ($match[0] * 100);
             } else {
                 return [
                     'error' => 'true',
