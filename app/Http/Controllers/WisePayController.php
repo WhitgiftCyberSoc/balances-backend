@@ -87,7 +87,7 @@ class WisePayController extends Controller
             ];
         }
 
-        // Extract  balances as integers
+        // Extract balances as integers
         foreach ($balances as &$balance) {
             if (preg_match('/(\d+)\.(\d+)/', $balance, $match)) {
                 $balance = (int) ($match[0] * 100);
