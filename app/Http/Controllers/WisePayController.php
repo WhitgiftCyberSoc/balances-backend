@@ -47,7 +47,14 @@ class WisePayController extends Controller
     public function checkAuth()
     {
         $authRequest = $this->authUser();
-        return $authRequest['response'];
+
+        if ($authRequest['error'] == 'true') {
+            return $authRequest['response'];
+        } elseif ($authRequest['error'] == 'false') {
+            return response()->json(['error' => 'false'], 200);
+        } else {
+            return response()->json(['error' => 'true', 'message' => 'The server experienced an unhandled exception.'], 500);
+        }
     }
 
     public function scrapeBalances()
