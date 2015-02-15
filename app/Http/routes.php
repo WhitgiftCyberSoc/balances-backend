@@ -11,6 +11,11 @@
 |
 */
 
+Route::post('auth', [
+    'middleware' => ['connection', 'auth'],
+    'uses' => 'WisePayController@authUser'
+]);
+
 Route::post('check', [
     'middleware' => ['connection', 'auth'],
     'uses' => 'WisePayController@check'
