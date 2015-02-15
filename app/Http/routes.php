@@ -13,10 +13,10 @@
 
 Route::post('auth', [
     'middleware' => ['connection', 'auth'],
-    'uses' => 'WisePayController@authUser'
+    'uses' => 'WisePayController@checkAuth'
 ]);
 
-Route::post('check', [
+Route::post('balances', [
     'middleware' => ['connection', 'auth'],
-    'uses' => 'WisePayController@check'
+    'uses' => 'WisePayController@checkBalances'
 ]);
