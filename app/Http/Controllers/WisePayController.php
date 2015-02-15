@@ -32,7 +32,7 @@ class WisePayController extends Controller
         $this->request = $request;
     }
 
-    public function check()
+    public function checkBalances()
     {
         $scrapeRequest = $this->scrapeBalances();
 
@@ -42,6 +42,12 @@ class WisePayController extends Controller
         }
 
         return response()->json(['balances' => $scrapeRequest['balances']], 200);
+    }
+
+    public function checkAuth()
+    {
+        $authRequest = $this->authUser();
+        return $authRequest['response'];
     }
 
     public function scrapeBalances()
