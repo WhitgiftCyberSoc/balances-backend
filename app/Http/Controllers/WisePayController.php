@@ -155,7 +155,7 @@ class WisePayController extends Controller
         if (strpos($code, 'Login Failure') !== false) {
             return [
                 'error' => 'true',
-                'response' => response()->json(['error' => 'true', 'message' => 'The username or password is incorrect. Please check your credentials and try again.'], 401)
+                'response' => response()->json(['error' => 'true', 'message' => 'The username or password is incorrect. Please check your credentials and try again.'], 401)->header('WWW-Authenticate', 'Basic realm="fake"')
             ];
         } elseif (strpos($code, '/parent/process.asp?ACT=logout') !== false) {
             return [

@@ -18,11 +18,11 @@ class AuthMiddleware {
 		$password = $request->input('password');
 
 		if (empty($username)) {
-			return response()->json(['error' => 'true', 'message' => 'The username or password is missing.'], 401);
+			return response()->json(['error' => 'true', 'message' => 'The username or password is missing.'], 401)->header('WWW-Authenticate', 'Basic realm="fake"');
 		}
 
 		if (empty($password)) {
-			return response()->json(['error' => 'true', 'message' => 'The username or password is missing.'], 401);
+			return response()->json(['error' => 'true', 'message' => 'The username or password is missing.'], 401)->header('WWW-Authenticate', 'Basic realm="fake"');
 		}
 
 		return $next($request);
