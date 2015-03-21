@@ -92,7 +92,7 @@ class WisePayController extends Controller
         // Scrape balances from DOM
         try {
             $balances['lunch'] = $xs->find('/html/body/div/table[1]/tr[7]/td/table/tr/td/table[2]/tr[1]/td/span[2]')->innerHTML();
-            $balances['tuck'] = $xs->find('/html/body/div/table[1]/tr[7]/td/table/tr/td/table[2]/tr[2]/td/span/b')->innerHTML();
+            $balances['tuck'] = $xs->find('/html/body/div/table[1]/tr[7]/td/table/tr/td/table[2]/tr[2]/td/span[2]')->innerHTML();
         } catch (NodeNotFoundException $e) {
             return [
                 'error' => 'true',
