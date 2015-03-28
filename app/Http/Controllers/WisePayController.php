@@ -69,9 +69,10 @@ class WisePayController extends Controller
 
         // Scrape balances from WisePay website
         $cookieJar = $authRequest['cookie'];
-        $response = $client->get('https://www.wisepay.co.uk/store/parent/default.asp?view=account', [
+        $response = $client->get('https://www.wisepay.co.uk/store/parent/default.asp?view=PP&sub=fd', [
             'headers' => [
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 6.2; Win64; x64; rv:27.0) Gecko/20100101 Waterfox/27.0 Firefox/27.0.1',
+                'Referer' => 'https://www.wisepay.co.uk/store/parent/default.asp?view=PP&sub=fd',
                 'Host' => 'www.wisepay.co.uk'
             ],
             'cookies' => $cookieJar
@@ -87,12 +88,13 @@ class WisePayController extends Controller
 
         // Load HTML into DOM
         $code = $response->getBody();
+//        echo($code);
         $xs = Selector::loadHTML($code);
 
         // Scrape balances from DOM
         try {
-            $balances['lunch'] = $xs->find('/html/body/div/table[1]/tr[7]/td/table/tr/td/table[2]/tr[1]/td/span[2]')->innerHTML();
-            $balances['tuck'] = $xs->find('/html/body/div/table[1]/tr[7]/td/table/tr/td/table[2]/tr[2]/td/span[2]')->innerHTML();
+            $balances['lunch'] = $xs->find('/html/body/div/table/tr[6]/td/table[2]/tr[1]/td/span[2]')->innerHTML();
+            $balances['tuck'] = $xs->find('/html/body/div/table/tr[6]/td/table[2]/tr[2]/td/span[2]')->innerHTML();
         } catch (NodeNotFoundException $e) {
             return [
                 'error' => 'true',
