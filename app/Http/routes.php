@@ -20,3 +20,8 @@ Route::post('balances', [
     'middleware' => ['connection', 'auth'],
     'uses' => 'WisePayController@checkBalances'
 ]);
+
+Route::post('all', [
+    'middleware' => ['connection', 'auth'],
+    'uses' => 'WisePayController@checkBalancesAndPurchases'
+]);

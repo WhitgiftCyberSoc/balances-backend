@@ -1,17 +1,12 @@
 <?php namespace App\Http\Controllers;
 
 use App\Http\Requests;
-use App\Http\Controllers\Controller;
-
+use GuzzleHttp\Client;
+use GuzzleHttp\Cookie\CookieJar;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-
-use GuzzleHttp\Client;
-use GuzzleHttp\Cookie\CookieJarInterface;
-use GuzzleHttp\Cookie\CookieJar;
-
-use XPathSelector\Selector;
 use XPathSelector\Exception\NodeNotFoundException;
+use XPathSelector\Selector;
 
 /**
  * Class WisePayController
@@ -27,47 +22,189 @@ class WisePayController extends Controller
      */
     private $request;
 
+    private $currentHtmlBody;
+
     public function __construct(Request $request)
     {
         $this->request = $request;
     }
 
-    public function checkBalances()
-    {
-        $scrapeRequest = $this->scrapeBalances();
-
-        // Pass on previous errors
-        if ($scrapeRequest['error'] == 'true') {
-            return $scrapeRequest['response'];
-        }
-
-        return response()->json(['balances' => $scrapeRequest['balances']], 200);
-    }
-
     public function checkAuth()
     {
+        // Make an authentication attempt and pass on errors
         $authRequest = $this->authUser();
 
-        if ($authRequest['error'] == 'true') {
+        if ($authRequest['error'] === 'true') {
             return $authRequest['response'];
-        } elseif ($authRequest['error'] == 'false') {
-            return response()->json(['error' => 'false'], 200);
+        } elseif ($authRequest['error'] === 'false') {
+            return response()->json(['error' => 'false', 'message' => ''], 200);
         } else {
             return response()->json(['error' => 'true', 'message' => 'The server experienced an unhandled exception.'], 500);
         }
     }
 
-    public function scrapeBalances()
+    public function checkBalances()
+    {
+        // Retrieve HTML from the account page and pass on errors
+        $code = $this->getHtmlFromAccountPage();
+
+        if ($code['error'] === 'true') {
+            return $code;
+        }
+
+        // Retrieve balances and pass on errors
+        $balances = $this->scrapeBalancesFromHtml();
+
+        if ($balances['error'] === 'true') {
+            return $balances['response'];
+        } elseif ($balances['error'] === 'false') {
+            return response()->json(['error' => 'false', 'balances' => $balances['balances'], 'message' => ''], 200);
+        } else {
+            return response()->json(['error' => 'true', 'message' => 'The server experienced an unhandled exception.'], 500);
+        }
+    }
+
+    public function checkBalancesAndPurchases()
+    {
+        // Retrieve HTML from the account page and pass on errors
+        $code = $this->getHtmlFromAccountPage();
+
+        if ($code['error'] === 'true') {
+            return $code;
+        }
+
+        // Retrieve purchases and pass on errors
+        $purchases = $this->scrapePurchasesFromHtml();
+        if ($purchases['error'] === 'true') {
+            return $purchases['response'];
+        }
+
+        // Retrieve balances and pass on errors
+        $balances = $this->scrapeBalancesFromHtml();
+        if ($balances['error'] === 'true') {
+            return $balances['response'];
+        }
+
+        if ($purchases['error'] === 'false' && $balances['error'] === 'false') {
+            return response()->json(['error' => 'false', 'balances' => $balances['balances'], 'purchases' => $purchases['purchases'], 'message' => ''], 200);
+        } else {
+            return response()->json(['error' => 'true', 'message' => 'The server experienced an unhandled exception.'], 500);
+        }
+    }
+
+    private function scrapeBalancesFromHtml()
+    {
+        $xs = Selector::loadHTML($this->currentHtmlBody);
+
+        // Scrape balances from DOM
+        try {
+            $balances['lunch'] = $xs->find('/html/body/div/table/tr[6]/td/table[2]/tr[1]/td/span[2]')->innerHTML();
+            $balances['tuck'] = $xs->find('/html/body/div/table/tr[6]/td/table[2]/tr[2]/td/span[2]')->innerHTML();
+        } catch (NodeNotFoundException $e) {
+            return [
+                'error' => 'true',
+                'response' => response()->json(['error' => 'true', 'message' => 'The server has been unable to obtain the balances.'], 500)
+            ];
+        }
+
+        // Extract balances as integers
+        foreach ($balances as &$balance) {
+            if (preg_match('/(\d+)\.(\d+)/', $balance, $match)) {
+                $balance = (int)($match[0] * 100);
+            } else {
+                return [
+                    'error' => 'true',
+                    'response' => response()->json(['error' => 'true', 'message' => 'The server has been unable to obtain and parse the balances.'], 500)
+                ];
+            }
+        }
+
+        return [
+            'error' => 'false',
+            'balances' => $balances
+        ];
+    }
+
+    private function scrapePurchasesFromHtml()
+    {
+        $xs = Selector::loadHTML($this->currentHtmlBody);
+
+        // Scrape purchases from DOM
+        $unparsedPurchases = [];
+
+        try {
+            $scrapedPurchases = $xs->findAll('/html/body/div/table/tr[6]/td/table[4]/tr/td[2]/table[2]/tr');
+
+            $isSkipped = false;
+            foreach ($scrapedPurchases as $scrapedPurchase) {
+                if (!$isSkipped) {
+                    $isSkipped = true;
+                    continue;
+                }
+
+                array_push($unparsedPurchases, [
+                    'date' => trim($scrapedPurchase->find('td[1]')->innerHTML()),
+                    'item' => trim($scrapedPurchase->find('td[2]')->innerHTML()),
+                    'price' => trim($scrapedPurchase->find('td[3]')->innerHTML())
+                ]);
+            }
+        } catch (NodeNotFoundException $e) {
+            return [
+                'error' => 'true',
+                'response' => response()->json(['error' => 'true', 'message' => 'The server has been unable to obtain the list of purchases.'], 500)
+            ];
+        }
+
+        // Extract details for each purchase
+        $purchases = [];
+        foreach ($unparsedPurchases as $unparsedPurchase) {
+
+            // Parse date and time into separate values
+            if (preg_match_all('/^(\d{2}\/\d{2}\/\d{4}) (\d{2}\:\d{2}\:\d{2})$/', $unparsedPurchase['date'], $matches)) {
+                $date = $matches[1][0];
+                $time = $matches[2][0];
+            } else {
+                return [
+                    'error' => 'true',
+                    'response' => response()->json(['error' => 'true', 'message' => 'The server has been unable to obtain and parse the list of purchases.'], 500)
+                ];
+            }
+
+            // Parse price
+            if (preg_match('/(\d+)\.(\d+)/', $unparsedPurchase['price'], $match)) {
+                $price = (int)($match[0] * 100);
+            } else {
+                return [
+                    'error' => 'true',
+                    'response' => response()->json(['error' => 'true', 'message' => 'The server has been unable to obtain and parse the list of purchases.'], 500)
+                ];
+            }
+
+            array_push($purchases, [
+                'date' => $date,
+                'time' => $time,
+                'item' => $unparsedPurchase['item'],
+                'price' => $price
+            ]);
+        }
+
+        return [
+            'error' => 'false',
+            'purchases' => $purchases
+        ];
+    }
+
+    private function getHtmlFromAccountPage()
     {
         $client = new Client();
         $authRequest = $this->authUser();
 
         // Pass on previous errors
-        if ($authRequest['error'] == 'true') {
+        if ($authRequest['error'] === 'true') {
             return $authRequest;
         }
 
-        // Scrape balances from WisePay website
+        // Retrieve the account page
         $cookieJar = $authRequest['cookie'];
         $response = $client->get('https://www.wisepay.co.uk/store/parent/default.asp?view=PP&sub=fd', [
             'headers' => [
@@ -87,40 +224,14 @@ class WisePayController extends Controller
         }
 
         // Load HTML into DOM
-        $code = $response->getBody();
-//        echo($code);
-        $xs = Selector::loadHTML($code);
-
-        // Scrape balances from DOM
-        try {
-            $balances['lunch'] = $xs->find('/html/body/div/table/tr[6]/td/table[2]/tr[1]/td/span[2]')->innerHTML();
-            $balances['tuck'] = $xs->find('/html/body/div/table/tr[6]/td/table[2]/tr[2]/td/span[2]')->innerHTML();
-        } catch (NodeNotFoundException $e) {
-            return [
-                'error' => 'true',
-                'response' => response()->json(['error' => 'true', 'message' => 'The server has been unable to obtain the balances.'], 500)
-            ];
-        }
-
-        // Extract balances as integers
-        foreach ($balances as &$balance) {
-            if (preg_match('/(\d+)\.(\d+)/', $balance, $match)) {
-                $balance = (int) ($match[0] * 100);
-            } else {
-                return [
-                    'error' => 'true',
-                    'response' => response()->json(['error' => 'true', 'message' => 'The server has been unable to obtain and match the balances.'], 500)
-                ];
-            }
-        }
+        $this->currentHtmlBody = $response->getBody();
 
         return [
             'error' => 'false',
-            'balances' => $balances
         ];
     }
 
-    public function authUser()
+    private function authUser()
     {
         $client = new Client();
         $cookieJar = new CookieJar();
